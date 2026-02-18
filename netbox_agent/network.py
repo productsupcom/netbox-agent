@@ -304,7 +304,9 @@ class Network(object):
         return update, interface
 
     def update_interface_macs(self, nic, macs):
-        nb_macs = list(self.nb.dcim.mac_addresses.filter(interface_id=nic.id))
+        nb_macs = list(self.nb.dcim.mac_addresses.filter(assigned_object_type="virtualization.vminterface",
+        assigned_object_id=nic.id,
+        limit=0,))
         # Clean
         for nb_mac in nb_macs:
             if nb_mac.mac_address not in macs:
