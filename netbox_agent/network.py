@@ -305,9 +305,13 @@ class Network(object):
     def get_netbox_version(self):
         try:
             version_str = self.nb.version
+            print(f"DEBUG version_str: {version_str}") 
             parts = version_str.split('.')
-            return tuple(int(x) for x in parts[:2])
-        except Exception:
+            result = tuple(int(x) for x in parts[:2])
+            print(f"DEBUG version tuple: {result}")     
+            return result
+        except Exception as e:
+            print(f"DEBUG version exception: {e}")    
             return (0, 0)
     def update_interface_macs(self, nic, macs):
         nb_version = self.get_netbox_version()  
