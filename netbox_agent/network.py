@@ -304,11 +304,10 @@ class Network(object):
         return update, interface
 
     def update_interface_macs(self, interface, macs):
-        if hasattr(self, 'is_virtual') and self.is_virtual:
+        if hasattr(self.nb_net, 'virtual_machines'):
             object_type = 'virtualization.vminterface'
         else:
             object_type = 'dcim.interface'
-        
         try:
             nb_macs = list(self.nb.dcim.mac_addresses.filter(
                 assigned_object_type=object_type,
