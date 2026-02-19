@@ -303,26 +303,50 @@ class Network(object):
                 interface.untagged_vlan = nb_vlan.id
         return update, interface
 
-    def update_interface_macs(self, nic, macs):
-        nb_macs = list(self.nb.dcim.mac_addresses.filter(assigned_object_type="virtualization.vminterface",
-        assigned_object_id=nic.id,
-        limit=0,))
-        # Clean
-        for nb_mac in nb_macs:
-            if nb_mac.mac_address not in macs:
-                logging.debug("Deleting extra MAC {mac} from {nic}".format(mac=nb_mac, nic=nic))
-                nb_mac.delete()
-        # Add missing
-        for mac in macs:
-            if mac not in {nb_mac.mac_address for nb_mac in nb_macs}:
-                logging.debug("Adding MAC {mac} to {nic}".format(mac=mac, nic=nic))
-                self.nb_net.mac_addresses.create(
-                    {
-                        "mac_address": mac,
-                        "assigned_object_type": "dcim.interface",
-                        "assigned_object_id": nic.id,
-                    }
-                )
+    def update_interface_macs(self, interface, macs):
+        if hasattr(self, 'is_virtual') and self.is_virtual:
+            object_type = 'virtualization.vminterface'
+        else:
+            object_type = 'dcim.interface'
+        
+        try:
+            nb_macs = list(self.nb.dcim.mac_addresses.filter(
+                assigned_object_type=object_type,
+                assigned_object_id=interface.id
+            ))
+        except Exception:
+            nb_macs = []
+        
+        existing_macs = {str(m.mac_address).upper(): m for m in nb_macs}
+        desired_macs = {m.upper() for m in macs if m}
+        
+        # Delete MACs no longer present
+        for mac_str, mac_obj in existing_macs.items():
+            if mac_str not in desired_macs:
+                logging.debug(f'Deleting MAC {mac_str} from interface {interface.name}')
+                mac_obj.delete()
+        
+        primary_mac_obj = None
+        for mac_str in desired_macs:
+            if mac_str in existing_macs:
+                primary_mac_obj = existing_macs[mac_str]
+            else:
+                logging.debug(f'Creating MAC {mac_str} on interface {interface.name}')
+                try:
+                    primary_mac_obj = self.nb.dcim.mac_addresses.create(
+                        mac_address=mac_str,
+                        assigned_object_type=object_type,
+                        assigned_object_id=interface.id,
+                    )
+                except Exception as e:
+                    logging.error(f'Failed to create MAC {mac_str}: {e}')
+        
+        if primary_mac_obj:
+            try:
+                interface.primary_mac_address = primary_mac_obj.id
+                interface.save()
+            except Exception as e:
+                logging.error(f'Failed to set primary MAC on interface {interface.name}: {e}')
 
     def create_netbox_nic(self, nic, mgmt=False):
         # TODO: add Optic Vendor, PN and Serial
