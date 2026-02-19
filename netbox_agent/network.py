@@ -302,6 +302,13 @@ class Network(object):
                 interface.mode = self.dcim_choices["interface:mode"]["Access"]
                 interface.untagged_vlan = nb_vlan.id
         return update, interface
+    def get_netbox_version(self):
+        try:
+            api_info = self.nb.version 
+            parts = str(api_info).split('.')
+            return tuple(int(x) for x in parts[:3])
+        except Exception:
+            return (0, 0, 0)
     def update_interface_macs(self, nic, macs):
         nb_version = self.get_netbox_version()  
         if nb_version >= (4, 2):
