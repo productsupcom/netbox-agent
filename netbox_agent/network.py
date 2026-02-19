@@ -305,13 +305,10 @@ class Network(object):
     def get_netbox_version(self):
         try:
             version_str = self.nb.version
-            print(f"DEBUG version_str: {version_str}") 
             parts = version_str.split('.')
             result = tuple(int(x) for x in parts[:2])
-            print(f"DEBUG version tuple: {result}")     
             return result
         except Exception as e:
-            print(f"DEBUG version exception: {e}")    
             return (0, 0)
     def update_interface_macs(self, nic, macs):
         nb_version = self.get_netbox_version()  
@@ -713,6 +710,7 @@ class ServerNetwork(Network):
         self.server = server
         self.device = self.server.get_netbox_server()
         self.nb_net = nb.dcim
+        self.nb = nb
         self.custom_arg = {"device": getattr(self.device, "id", None)}
         self.custom_arg_id = {"device_id": getattr(self.device, "id", None)}
         self.intf_type = "interface_id"
@@ -859,6 +857,7 @@ class VirtualNetwork(Network):
         self.server = server
         self.device = self.server.get_netbox_vm()
         self.nb_net = nb.virtualization
+        self.nb = nb
         self.custom_arg = {"virtual_machine": getattr(self.device, "id", None)}
         self.custom_arg_id = {"virtual_machine_id": getattr(self.device, "id", None)}
         self.intf_type = "vminterface_id"
