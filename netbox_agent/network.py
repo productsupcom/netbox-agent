@@ -684,6 +684,15 @@ class Network(object):
                 # sync local IPs
                 for ip in nic["ip"]:
                     self.create_or_update_netbox_ip_on_interface(ip, interface)
+
+            if is_netbox_42_plus:
+                primary_obj = getattr(interface, "primary_mac_address", None)
+                if primary_obj and not isinstance(primary_obj, int):
+                    primary_id = getattr(primary_obj, "id", None)
+                    if primary_id is None and isinstance(primary_obj, dict):
+                        primary_id = primary_obj.get("id")
+                    if primary_id:
+                        interface.primary_mac_address = primary_id
             if nic_update > 0:
                 interface.save()
 
