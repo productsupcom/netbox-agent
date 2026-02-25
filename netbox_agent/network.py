@@ -619,6 +619,8 @@ class Network(object):
             if is_netbox_42_plus:
                 if nic["mac"]:
                     self.update_interface_macs(interface, [nic["mac"]])
+                    # Refresh interface so future saves don't include stale primary MAC diffs
+                    interface = self.nb_net.interfaces.get(id=interface.id)
             elif nic["mac"] and nic["mac"] != interface.mac_address:
                 logging.info(
                     "Updating interface {interface} mac_address to: {mac}".format(
