@@ -337,10 +337,11 @@ class Network(object):
                 )
 
     def _update_interface_macs_new(self, nic, macs):
-        if hasattr(self.nb_net, 'virtual_machines'):
-            object_type = 'virtualization.vminterface'
-        else:
-            object_type = 'dcim.interface'
+        object_type = (
+            "virtualization.vminterface"
+            if self.assigned_object_type == "virtualization.vminterface"
+            else "dcim.interface"
+        )
         try:
             nb_macs = list(self.nb.dcim.mac_addresses.filter(
                 assigned_object_type=object_type,
@@ -546,6 +547,7 @@ class Network(object):
         if config.update_all is None or config.update_network is None:
             return None
         logging.debug("Creating/Updating NIC...")
+        is_netbox_42_plus = version.parse(nb.version) >= version.parse("4.2")
 
         # delete unknown interface
         nb_nics = list(self.get_netbox_network_cards())
@@ -602,12 +604,6 @@ class Network(object):
                 interface.name = nic['name']
                 nic_update += 1
             
-            if nic['mac'] != interface.mac_address:
-                logging.info('Updating interface {interface} mac_address to: {mac}'.format(
-                    interface=interface, mac=nic['mac']))
-                interface.mac_address = nic['mac']
-                nic_update += 1
-            
             ret, interface = self.reset_vlan_on_interface(nic, interface)
             nic_update += ret
 
@@ -620,21 +616,16 @@ class Network(object):
                 interface.name = nic["name"]
                 nic_update += 1
 
-            if version.parse(nb.version) >= version.parse("4.2"):
-                # Create MAC objects
+            if is_netbox_42_plus:
                 if nic["mac"]:
                     self.update_interface_macs(interface, [nic["mac"]])
-
-            if nic["mac"] and nic["mac"] != interface.mac_address:
+            elif nic["mac"] and nic["mac"] != interface.mac_address:
                 logging.info(
-                    "Updating interface {interface} mac to: {mac}".format(
+                    "Updating interface {interface} mac_address to: {mac}".format(
                         interface=interface, mac=nic["mac"]
                     )
                 )
-                if version.parse(nb.version) < version.parse("4.2"):
-                    interface.mac_address = nic["mac"]
-                else:
-                    interface.primary_mac_address = {"mac_address": nic["mac"]}
+                interface.mac_address = nic["mac"]
                 nic_update += 1
 
             if hasattr(interface, "mtu"):
